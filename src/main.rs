@@ -6,8 +6,7 @@ use std::fs;
 use stopwatch::{Stopwatch};
 
 fn main() {
-    let sw = Stopwatch::start_new();
-    let source_path = "C:\\Users\\ed broome\\CLionProjects\\file-split\\target\\release\\488e6fbdb8d8442cac043bfa481d78fb";
+    let source_path = "C:\\data\\CLionProjects\\exports";
     let mut tup: Vec<(&str, usize, usize)> = Vec::new();
 
     tup.push(("s", 0, 2));
@@ -33,8 +32,27 @@ fn main() {
 
     for path in paths {
         let entry = path.unwrap();
+        let file_type = entry.file_type();
+
+        let is_dir = match file_type {
+            Ok(ft) => {
+                ft.is_dir()
+            }
+            Err(_) => {
+                panic!("god knows what happened");
+            }
+        };
+
         let file_entry = entry.file_name();
         let mut source_file = String::from(source_path);
+
+        if is_dir {
+            println!("skipping '{}' as it is a directory", source_file);
+
+            continue;
+        }
+
+        let sw = Stopwatch::start_new();
 
         source_file.push_str("\\");
         source_file.push_str(file_entry.to_str().expect("File name error"));
@@ -42,6 +60,8 @@ fn main() {
         println!("{}", source_file);
 
         sort_file_contents(&source_file, &tup);
+
+        println!("Time Taken: {:?}", sw.elapsed());
     }
 
     println!("Thing took {:?}", sw.elapsed());
