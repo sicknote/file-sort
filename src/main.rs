@@ -63,8 +63,6 @@ fn main() {
 
         println!("Time Taken: {:?}", sw.elapsed());
     }
-
-    println!("Thing took {:?}", sw.elapsed());
 }
 
 fn sort_file_contents(source_file: &str, tup: &Vec<(&str, usize, usize)>) {
@@ -101,7 +99,7 @@ fn comparison_predicate(a: &str, b: &str, tup: &Vec<(&str, usize, usize)>) -> Or
 
     for var in tup {
         if var.0 == "s" {
-            compare = compare_string_slice(a, b, 0, 2);
+            compare = compare_string_slice(a, b, var.1, var.2);
 
             if compare != Ordering::Equal
             {
@@ -109,7 +107,7 @@ fn comparison_predicate(a: &str, b: &str, tup: &Vec<(&str, usize, usize)>) -> Or
             }
         }
         if var.0 == "d" {
-            compare = compare_string_date_slice(a, b, 0, 2);
+            compare = compare_string_date_slice(a, b, var.1, var.2);
 
             if compare != Ordering::Equal
             {
