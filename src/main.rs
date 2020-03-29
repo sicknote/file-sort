@@ -3,7 +3,7 @@ extern crate stopwatch;
 use std::io::{BufReader, BufRead, Write, LineWriter};
 use std::cmp::Ordering;
 use std::fs;
-use stopwatch::{Stopwatch};
+use stopwatch::Stopwatch;
 
 fn main() {
     let source_path = "C:\\data\\CLionProjects\\exports";
@@ -119,16 +119,18 @@ fn comparison_predicate(a: &str, b: &str, tup: &Vec<(&str, usize, usize)>) -> Or
     Ordering::Equal
 }
 
-fn compare_string_slice(a: &str, b: &str, offset: usize, length: usize) -> Ordering {
-    let slice_a: &str = &a[offset..length];
-    let slice_b: &str = &b[offset..length];
+fn compare_string_slice(a: &str, b: &str, start: usize, length: usize) -> Ordering {
+    let end = start + length;
+    let slice_a: &str = &a[start..end];
+    let slice_b: &str = &b[start..end];
 
     slice_a.cmp(&slice_b)
 }
 
-fn compare_string_date_slice(a: &str, b: &str, offset: usize, length: usize) -> Ordering {
-    let slice_a: &str = &a[offset..length];
-    let slice_b: &str = &b[offset..length];
+fn compare_string_date_slice(a: &str, b: &str, start: usize, length: usize) -> Ordering {
+    let end = start + length;
+    let slice_a: &str = &a[start..end];
+    let slice_b: &str = &b[start..end];
 
     compare_string_dates(&slice_a, &slice_b)
 }
