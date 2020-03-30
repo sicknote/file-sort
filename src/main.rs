@@ -39,7 +39,7 @@ fn main() {
                 ft.is_dir()
             }
             Err(_) => {
-                panic!("god knows what happened");
+                panic!("file type not determined for '{:?}'.", entry.file_name());
             }
         };
 
@@ -57,7 +57,7 @@ fn main() {
         source_file.push_str("\\");
         source_file.push_str(file_entry.to_str().expect("File name error"));
 
-        println!("{}", source_file);
+        println!("handling file: {}", source_file);
 
         sort_file_contents(&source_file, &tup);
 
