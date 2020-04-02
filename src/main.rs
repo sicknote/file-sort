@@ -1,12 +1,12 @@
 extern crate stopwatch;
 
-use std::io::{BufReader, BufRead, Write, LineWriter, BufWriter};
+use std::io::{BufReader, BufRead, Write, BufWriter};
 use std::cmp::Ordering;
 use std::fs;
 use stopwatch::Stopwatch;
 
 fn main() {
-    let source_path = "C:\\data\\CLionProjects\\exports";
+    let source_path = "C:\\data\\CLionProjects\\file-split\\d114e10b511945d2a58b54e0b4c1640d";
     let mut tup: Vec<(&str, usize, usize)> = Vec::new();
 
     tup.push(("s", 0, 2));
@@ -27,6 +27,10 @@ fn main() {
     tup.push(("d", 116, 8));
     tup.push(("d", 124, 8));
     tup.push(("s", 99, 9));
+
+    let sw_full = Stopwatch::start_new();
+
+    println!("sorting all files in {}", source_path);
 
     let paths = fs::read_dir(source_path).unwrap();
 
@@ -61,8 +65,10 @@ fn main() {
 
         sort_file_contents(&source_file, &tup);
 
-        println!("Time Taken: {:?}", sw.elapsed());
+        println!("Time Taken: {:?}", sw.elapsed_ms());
     }
+
+    println!("Total Time Taken: {:?}", sw_full.elapsed_ms());
 }
 
 fn sort_file_contents(source_file: &str, tup: &Vec<(&str, usize, usize)>) {
