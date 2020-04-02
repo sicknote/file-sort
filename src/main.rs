@@ -1,6 +1,6 @@
 extern crate stopwatch;
 
-use std::io::{BufReader, BufRead, Write, LineWriter};
+use std::io::{BufReader, BufRead, Write, LineWriter, BufWriter};
 use std::cmp::Ordering;
 use std::fs;
 use stopwatch::Stopwatch;
@@ -86,7 +86,7 @@ fn sort_file_contents(source_file: &str, tup: &Vec<(&str, usize, usize)>) {
     buffer.sort_by(|a, b| comparison_predicate(a, b, &tup));
 
     let source = std::fs::File::create(source_file).expect("Failed to create file");
-    let mut source_writer = LineWriter::new(source);
+    let mut source_writer = BufWriter::new(source);
 
     for line in buffer
     {
