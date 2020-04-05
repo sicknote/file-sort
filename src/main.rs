@@ -1,12 +1,24 @@
+extern crate clap;
 extern crate stopwatch;
 
+use clap::{App, Arg};
 use std::io::{BufReader, BufRead, Write, BufWriter};
 use std::cmp::Ordering;
 use std::fs;
 use stopwatch::Stopwatch;
 
 fn main() {
-    let source_path = "C:\\data\\CLionProjects\\file-split\\d114e10b511945d2a58b54e0b4c1640d";
+    let matches = App::new("TACT File sorter")
+        .version("1.0")
+        .author("edb")
+        .about("Sorts TACT 80/150 char files")
+        .arg(Arg::with_name("INPUT")
+            .help("Sets the input folder to use")
+            .required(true)
+            .index(1))
+        .get_matches();
+
+    let source_path = matches.value_of("INPUT").unwrap();
     let mut tup: Vec<(&str, usize, usize)> = Vec::new();
 
     tup.push(("s", 0, 2));
@@ -30,7 +42,7 @@ fn main() {
 
     let sw_full = Stopwatch::start_new();
 
-    println!("sorting all files in {}", source_path);
+    println!("Sorting files: {}", source_path);
 
     let paths = fs::read_dir(source_path).unwrap();
 
@@ -56,16 +68,10 @@ fn main() {
             continue;
         }
 
-        let sw = Stopwatch::start_new();
-
         source_file.push_str("\\");
         source_file.push_str(file_entry.to_str().expect("File name error"));
 
-        println!("handling file: {}", source_file);
-
         sort_file_contents(&source_file, &tup);
-
-        println!("Time Taken: {:?}", sw.elapsed_ms());
     }
 
     println!("Total Time Taken: {:?}", sw_full.elapsed_ms());
