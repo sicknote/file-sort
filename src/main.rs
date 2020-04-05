@@ -74,7 +74,7 @@ fn main() {
         sort_file_contents(&source_file, &tup);
     }
 
-    println!("Total Time Taken: {:?}", sw_full.elapsed_ms());
+    println!("Total Time: {:?}", sw_full.elapsed());
 }
 
 fn sort_file_contents(source_file: &str, tup: &Vec<(&str, usize, usize)>) {
