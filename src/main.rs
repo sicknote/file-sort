@@ -8,10 +8,15 @@ use std::{fs, env};
 use stopwatch::Stopwatch;
 use uuid::Uuid;
 use std::fs::File;
+use std::collections::VecDeque;
 
 const LIMIT: i32 = 1000;
-const BUFFER_SIZE: usize = 500;
 const BLANK_DATE: &str = "        ";
+
+enum CollectionState {
+    Drained,
+    Ok,
+}
 
 fn main() {
     let matches = App::new("TACT File splitter")
@@ -39,9 +44,11 @@ fn main() {
 
     println!("Time: {:?}", sw_full.elapsed());
 
+    //let split_path = "C:\\data\\CLionProjects\\file-sort\\b8deff39284e49048bb46c68b1d94385";
+
     let final_path = join_files(&split_path, &sort_rules);
 
-    std::fs::remove_dir_all(split_path).expect("Failed to remove intermediate folder");
+    //std::fs::remove_dir_all(split_path).expect("Failed to remove intermediate folder");
 
     println!("Total Time: {:?}", sw_full.elapsed());
     println!("Sorted file: {}", final_path);
@@ -120,30 +127,124 @@ fn join_files(source: &str, sort: &Vec<(&str, usize, usize)>) -> String {
     let mut positions: Vec<usize> = Vec::new();
     let mut drained: Vec<bool> = Vec::new();
 
+    for _i in 0..files.len() {
+        let buffer: VecDeque<String> = VecDeque::new();
+
+        buffers.push(buffer);
+        offsets.push(0);
+        positions.push(0);
+        drained.push(false);
+    }
+
     std::fs::create_dir(&target).expect("Failed to create target directory");
 
     println!("join_files: {}", &target);
-
-    populate_first_collections(&files, &mut buffers, &mut offsets, &mut positions, &mut drained);
 
     target.push_str("\\sorted.export");
 
     let target_file = std::fs::File::create(&target).expect("Failed to create file");
     let mut source_writer = BufWriter::new(target_file);
 
-    loop {
-        let final_buffer = parse_buffers(&mut buffers, &mut offsets, &mut positions, &mut drained, &sort, &files);
+    let mut internal_buffer: VecDeque<(usize, String)> = VecDeque::new();
+    let reader_length = buffers.len();
+    let mut found = false;
 
-        if final_buffer.is_empty() {
-            break;
+    for current_position in { 0..reader_length } {
+        let buffer: &mut VecDeque<String>;
+
+        match check_collection(&mut buffers, &mut offsets, &mut positions, &mut drained, &files, current_position) {
+            CollectionState::Drained => {
+                continue;
+            }
+            CollectionState::Ok => {
+                buffer = &mut buffers[current_position];
+            }
         }
 
-        for x in final_buffer {
-            source_writer.write(x.as_bytes()).expect("Failed to write line");
+        let first = &mut buffer.pop_front();
+
+        let current_value: String;
+
+        match first {
+            None => {
+                panic!("asd");
+            }
+            Some(s) => {
+                current_value = s.to_string();
+            }
         }
 
-        source_writer.flush().expect("Flush failed");
+        if !found {
+            found = true;
+            let lowest_value = String::from(current_value);
+            internal_buffer.push_back((current_position, lowest_value));
+
+            continue;
+        }
+
+        let cur_length = internal_buffer.len();
+
+        internal_sort(&mut internal_buffer, &current_value, sort, current_position);
+
+        if internal_buffer.len() == cur_length {
+            let lowest_value = String::from(&current_value);
+
+            internal_buffer.push_back((current_position, lowest_value));
+        }
     }
+
+    let mut pos: usize;
+
+    loop {
+        let first = &mut internal_buffer.pop_front();
+
+        match first {
+            None => {
+                break;
+            }
+            Some(s) => {
+                pos = s.0;
+                let val = &s.1;
+
+                source_writer.write(val.as_bytes()).expect("failed to write to file");
+            }
+        }
+
+        let buffer: &mut VecDeque<String>;
+
+        match check_collection(&mut buffers, &mut offsets, &mut positions, &mut drained, &files, pos) {
+            CollectionState::Drained => {
+                continue;
+            }
+            CollectionState::Ok => {
+                buffer = &mut buffers[pos];
+            }
+        }
+        let first = &mut buffer.pop_front();
+
+        let current_value: String;
+
+        match first {
+            None => {
+                panic!("asd");
+            }
+            Some(s) => {
+                current_value = s.to_string();
+            }
+        }
+
+        let cur_length = internal_buffer.len();
+
+        internal_sort(&mut internal_buffer, &current_value, sort, pos);
+
+        if internal_buffer.len() == cur_length {
+            let lowest_value = current_value;
+
+            internal_buffer.push_back((pos, lowest_value));
+        }
+    }
+
+    source_writer.flush().expect("File flush failed");
 
     target
 }
@@ -173,47 +274,53 @@ fn sorter<'a>() -> Vec<(&'a str, usize, usize)> {
     tup
 }
 
-/// Initial load of data from the given files to a set of vectors
-fn populate_first_collections<'a>(files: &Vec<String>, buffers: &mut Vec<Vec<String>>, offsets: &mut Vec<u64>, positions: &mut Vec<usize>, drained: &mut Vec<bool>) {
-    for source_file in files {
-        let mut buffer_offset: u64 = 0;
-        let mut lines = 0;
-        let mut buffer: Vec<String> = Vec::new();
-        let source = std::fs::File::open(source_file).expect("Failed to open file");
-        let mut source_reader = BufReader::new(source);
+fn internal_sort(internal_buffer: &mut VecDeque<(usize, String)>, current_value: &String, sort: &Vec<(&str, usize, usize)>, pos: usize) {
+    let cur_length = internal_buffer.len();
 
-        'inner: loop {
-            let mut line = String::new();
-            let l = source_reader.read_line(&mut line).expect("Failed to read line");
+    for p in 0..cur_length {
+        let t = &internal_buffer[p];
+        let compare = compare_by_predicate(&current_value, &t.1, &sort);
 
-            if l == 0 { // EOF
-                break 'inner;
-            }
+        if compare == Ordering::Less {
+            let lowest_value = String::from(current_value);
 
-            lines = lines + 1;
+            internal_buffer.insert(p, (pos, lowest_value));
 
-            buffer_offset = buffer_offset + line.len() as u64;
-
-            buffer.push(line);
-
-            if lines >= LIMIT
-            {
-                break 'inner;
-            }
+            break;
         }
-
-        buffers.push(buffer);
-        offsets.push(buffer_offset);
-        positions.push(0);
-        drained.push(false);
     }
 }
 
-fn populate_empty_collection(buffers: &mut Vec<Vec<String>>, offsets: &mut Vec<u64>, positions: &mut Vec<usize>, files: &Vec<String>, lowest_index: usize) {
-    let mut offset = offsets[lowest_index];
+fn check_collection(buffers: &mut Vec<VecDeque<String>>, offsets: &mut Vec<u64>, positions: &mut Vec<usize>, drained: &mut Vec<bool>, files: &Vec<String>, position: usize) -> CollectionState {
+    let mut buffer = &mut buffers[position];
+
+    if buffer.is_empty() {
+        let is_drained = drained[position];
+
+        if is_drained
+        {
+            return CollectionState::Drained;
+        }
+
+        populate_empty_collection(buffers, offsets, positions, &files, position);
+
+        buffer = &mut buffers[position];
+
+        if buffer.is_empty() {
+            drained[position] = true;
+
+            return CollectionState::Drained;
+        }
+    }
+
+    return CollectionState::Ok;
+}
+
+fn populate_empty_collection(buffers: &mut Vec<VecDeque<String>>, offsets: &mut Vec<u64>, positions: &mut Vec<usize>, files: &Vec<String>, position: usize) {
+    let mut offset = offsets[position];
     let mut lines = 0;
-    let mut buffer: Vec<String> = Vec::new();
-    let path = &files[lowest_index];
+    let mut buffer: VecDeque<String> = VecDeque::new();
+    let path = &files[position];
     let source = std::fs::File::open(path).expect("Failed to open file");
     let mut source_reader = BufReader::with_capacity(16384, source);
 
@@ -231,7 +338,7 @@ fn populate_empty_collection(buffers: &mut Vec<Vec<String>>, offsets: &mut Vec<u
 
         offset = offset + line.len() as u64;
 
-        buffer.push(line);
+        buffer.push_back(line);
 
         if lines >= LIMIT
         {
@@ -239,80 +346,9 @@ fn populate_empty_collection(buffers: &mut Vec<Vec<String>>, offsets: &mut Vec<u
         }
     }
 
-    offsets[lowest_index] = offset;
-    buffers[lowest_index] = buffer;
-    positions[lowest_index] = 0;
-}
-
-/// sorts all elements in all buffers into a final buffer
-fn parse_buffers(buffers: &mut Vec<Vec<String>>, offsets: &mut Vec<u64>, positions: &mut Vec<usize>, drained: &mut Vec<bool>, sort: &Vec<(&str, usize, usize)>, files: &Vec<String>) -> Vec<String> {
-    let mut final_buffer: Vec<String> = Vec::new();
-    let reader_length = buffers.len();
-
-    loop {
-        let mut lowest_index: usize = usize::min_value();
-        let mut lowest_value: String = "".to_string();
-        let mut found = false;
-
-        for i in { 0..reader_length } {
-            let mut position = positions[i];
-            let mut buffer = &buffers[i];
-
-            if position == buffer.len() {
-                let is_drained = drained[i];
-
-                if is_drained
-                {
-                    continue;
-                }
-
-                populate_empty_collection(buffers, offsets, positions, &files, i);
-
-                position = positions[i];
-                buffer = &buffers[i];
-
-                if position == buffer.len() {
-                    drained[i] = true;
-
-                    continue;
-                }
-            }
-
-            let current_value = &buffer[position];
-
-            if !found {
-                lowest_index = i;
-                found = true;
-                lowest_value = String::from(current_value);
-
-                continue;
-            }
-
-            let compare = compare_by_predicate(&current_value, &lowest_value, &sort);
-
-            if compare == Ordering::Less {
-                lowest_index = i;
-                found = true;
-                lowest_value = String::from(current_value);
-            }
-        }
-
-        if !found {
-            break;
-        }
-
-        final_buffer.push(lowest_value);
-
-        let update = positions[lowest_index];
-
-        positions[lowest_index] = update + 1;
-
-        if final_buffer.len() >= BUFFER_SIZE {
-            break;
-        }
-    }
-
-    final_buffer
+    offsets[position] = offset;
+    buffers[position] = buffer;
+    positions[position] = 0;
 }
 
 fn sort_file_contents(source_file: &str, tup: &Vec<(&str, usize, usize)>) {
