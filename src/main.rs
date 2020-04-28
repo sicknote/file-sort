@@ -323,7 +323,7 @@ fn populate_empty_collection(buffers: &mut Vec<VecDeque<String>>, offsets: &mut 
     let mut buffer: VecDeque<String> = VecDeque::new();
     let path = &files[position];
     let source = std::fs::File::open(path).expect("Failed to open file");
-    let mut source_reader = BufReader::with_capacity(16384, source);
+    let mut source_reader = BufReader::new(source);
 
     source_reader.seek(SeekFrom::Start(offset)).expect("Failed to seek in reader");
 
