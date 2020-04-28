@@ -10,6 +10,7 @@ use uuid::Uuid;
 use std::fs::File;
 use std::collections::VecDeque;
 
+const SPLIT_SIZE: usize = 10_485_760;
 const LIMIT: i32 = 1000;
 const BLANK_DATE: &str = "        ";
 
@@ -93,7 +94,7 @@ fn split_file(source_path: &str) -> String {
 
             total += l;
 
-            if total >= 10_485_760 {
+            if total >= SPLIT_SIZE {
                 break 'inner;
             }
         }
