@@ -11,6 +11,7 @@ use std::fs::File;
 use std::collections::VecDeque;
 
 const READER_BUFFER_SIZE: usize = 5_242_880;
+const WRITER_BUFFER_SIZE: usize = 5_242_880;
 const SPLIT_SIZE: usize = 10_485_760;
 const LIMIT: i32 = 1000;
 const BLANK_DATE: &str = "        ";
@@ -97,7 +98,7 @@ fn split_file(source_path: &str) -> String {
         }
 
         let target = File::create(file).expect("Failed to open target file");
-        let mut target_writer = BufWriter::new(target);
+        let mut target_writer = BufWriter::with_capacity(WRITER_BUFFER_SIZE, target);
 
         for line in &buffer {
             let b = line.as_bytes();
@@ -154,7 +155,7 @@ fn join_files(source: &str, sort: &Vec<(&str, usize, usize)>) -> String {
     target.push_str("\\sorted.export");
 
     let target_file = std::fs::File::create(&target).expect("Failed to create file");
-    let mut source_writer = BufWriter::new(target_file);
+    let mut source_writer = BufWriter::with_capacity(WRITER_BUFFER_SIZE, target_file);
 
     let mut internal_buffer: VecDeque<(usize, String)> = VecDeque::new();
     let reader_length = buffers.len();
