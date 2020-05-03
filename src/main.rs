@@ -10,6 +10,7 @@ use uuid::Uuid;
 use std::fs::File;
 use std::collections::VecDeque;
 
+const READER_BUFFER_SIZE: usize = 5_242_880;
 const SPLIT_SIZE: usize = 10_485_760;
 const LIMIT: i32 = 1000;
 const BLANK_DATE: &str = "        ";
@@ -65,7 +66,7 @@ fn split_file(source_path: &str) -> String {
     std::fs::create_dir(&target_path).expect("Failed to create target directory");
 
     let source = std::fs::File::open(source_path).expect("Failed to open file");
-    let mut source_reader = BufReader::new(source);
+    let mut source_reader = BufReader::with_capacity(READER_BUFFER_SIZE, source);
     let mut f = 1;
 
     'outer: loop {
