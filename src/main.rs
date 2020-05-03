@@ -2,7 +2,7 @@ extern crate clap;
 extern crate stopwatch;
 
 use clap::{App, Arg};
-use std::io::{BufReader, BufRead, Write, BufWriter, SeekFrom, Seek};
+use std::io::{BufReader, BufRead, Write, BufWriter, SeekFrom, Seek, Read};
 use std::cmp::Ordering;
 use std::{fs, env};
 use stopwatch::Stopwatch;
@@ -110,11 +110,14 @@ fn split_file(source_path: &str) -> String {
 /// Sorts all the files in source_path in memory
 fn sort_files(source_path: &str, sort: &Vec<(&str, usize, usize)>) {
     let paths = files_in_directory(source_path);
+    let mut i = 1;
 
     println!("sort_files: {}", &source_path);
 
     for path in paths {
-        sort_file_contents(&path, &sort);
+        sort_file_contents(source_path, &path, &sort, i);
+
+        i = i + 1;
     }
 }
 
@@ -352,10 +355,13 @@ fn populate_empty_collection(buffers: &mut Vec<VecDeque<String>>, offsets: &mut 
     positions[position] = 0;
 }
 
-fn sort_file_contents(source_file: &str, tup: &Vec<(&str, usize, usize)>) {
+fn sort_file_contents(source_path: &str, source_file: &str, tup: &Vec<(&str, usize, usize)>, i: i32) {
     let mut buffer: Vec<String> = Vec::new();
     let source = std::fs::File::open(source_file).expect("Failed to open file");
+    let mut target_file = String::from(source_path);
     let mut source_reader = BufReader::new(source);
+
+    target_file.push_str(&format!("\\sort.{}", i));
 
     loop {
         let mut line = String::new();
@@ -368,17 +374,17 @@ fn sort_file_contents(source_file: &str, tup: &Vec<(&str, usize, usize)>) {
         buffer.push(line);
     }
 
-    fs::remove_file(source_file).expect("Failed to remove file");
-
     buffer.sort_by(|a, b| compare_by_predicate(a, b, &tup));
 
-    let source = std::fs::File::create(source_file).expect("Failed to create file");
+    let source = std::fs::File::create(&target_file).expect(&format!("Failed to create file: '{}'", &target_file));
     let mut source_writer = BufWriter::new(source);
 
     for line in buffer
     {
         source_writer.write(line.as_bytes()).expect("Failed to write line");
     }
+
+    fs::remove_file(source_file).expect("Failed to remove file");
 }
 
 fn compare_by_predicate(a: &String, b: &String, tup: &Vec<(&str, usize, usize)>) -> Ordering {
