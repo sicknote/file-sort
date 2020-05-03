@@ -2,7 +2,7 @@ extern crate clap;
 extern crate stopwatch;
 
 use clap::{App, Arg};
-use std::io::{BufReader, BufRead, Write, BufWriter, SeekFrom, Seek, Read};
+use std::io::{BufReader, BufRead, Write, BufWriter, SeekFrom, Seek};
 use std::cmp::Ordering;
 use std::{fs, env};
 use stopwatch::Stopwatch;
@@ -69,38 +69,44 @@ fn split_file(source_path: &str) -> String {
     let mut source_reader = BufReader::with_capacity(READER_BUFFER_SIZE, source);
     let mut f = 1;
 
-    'outer: loop {
+    loop {
         let mut file = String::from(&target_path);
-
-        file.push_str("\\file.");
-        file.push_str(f.to_string().as_str());
-
-        drop_file(&file);
-
-        let target = File::create(file).expect("Failed to open target file");
-        let mut target_writer = BufWriter::new(target);
+        let mut buffer: Vec<String> = Vec::new();
         let mut total = 0;
 
-        'inner: loop {
+        file.push_str(&format!("\\file.{}", f));
+
+        loop {
             let mut line = String::new();
             let l = source_reader.read_line(&mut line).expect("Failed to read line");
 
             if l == 0 { // EOF
-                break 'outer;
+                break;
             }
 
-            let b = line.as_bytes();
-
-            target_writer.write(b).expect("Failed to write to file");
-
+            buffer.push(line);
             total += l;
 
             if total >= SPLIT_SIZE {
-                break 'inner;
+                break;
             }
         }
 
+        if buffer.len() == 0 {
+            break;
+        }
+
+        let target = File::create(file).expect("Failed to open target file");
+        let mut target_writer = BufWriter::new(target);
+
+        for line in &buffer {
+            let b = line.as_bytes();
+
+            target_writer.write(b).expect("Failed to write to file");
+        }
+
         target_writer.flush().expect("Failed to flush writer");
+        buffer.clear();
 
         f = f + 1;
     }
