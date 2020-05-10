@@ -30,10 +30,28 @@ fn main() {
             .help("Sets the input file to use")
             .required(true)
             .index(1))
+        .arg(Arg::with_name("SORT")
+            .help("Sets the type of sorting applied to the file")
+            .short("s")
+            .long("sort")
+            .takes_value(true)
+            .required(false))
         .get_matches();
 
     let source_path = matches.value_of("INPUT").unwrap();
-    let sort_rules = sorter();
+    let sort_value: &str;
+    let sort_type = matches.value_of("SORT");
+
+    match sort_type {
+        None => {
+            sort_value = "line";
+        }
+        Some(st) => {
+            sort_value = st;
+        }
+    }
+
+    let sort_rules = sorter(sort_value);
 
     let sw_full = Stopwatch::start_new();
 
@@ -51,7 +69,7 @@ fn main() {
 
     let final_path = join_files(&split_path, &sort_rules);
 
-    //std::fs::remove_dir_all(split_path).expect("Failed to remove intermediate folder");
+    std::fs::remove_dir_all(split_path).expect("Failed to remove intermediate folder");
 
     println!("Total Time: {:?}", sw_full.elapsed());
     println!("Sorted file: {}", final_path);
@@ -261,27 +279,50 @@ fn join_files(source: &str, sort: &Vec<(&str, usize, usize)>) -> String {
     target
 }
 
-fn sorter<'a>() -> Vec<(&'a str, usize, usize)> {
+fn sorter<'a>(sort_value: &str) -> Vec<(&'a str, usize, usize)> {
     let mut tup: Vec<(&'a str, usize, usize)> = Vec::new();
 
-    tup.push(("s", 0, 2));
-    tup.push(("s", 2, 2 + 2));
-    tup.push(("s", 7, 7 + 6));
-    tup.push(("s", 13, 13 + 5));
-    tup.push(("s", 23, 23 + 5));
-    tup.push(("s", 139, 139 + 3));
-    tup.push(("s", 37, 37 + 3));
-    tup.push(("s", 33, 33 + 4));
-    tup.push(("s", 40, 40 + 1));
-    tup.push(("s", 43, 43 + 8));
-    tup.push(("s", 51, 51 + 4));
-    tup.push(("s", 55, 55 + 1));
-    tup.push(("s", 56, 56 + 6));
-    tup.push(("d", 108, 108 + 8));
-    tup.push(("s", 142, 142 + 5));
-    tup.push(("d", 116, 116 + 8));
-    tup.push(("d", 124, 124 + 8));
-    tup.push(("s", 99, 99 + 9));
+    if sort_value == "line" {
+        tup.push(("l", 0, 0));
+    } else {
+        let mut sv = String::from(sort_value);
+        if !sv.ends_with(";") {
+            sv.push_str(";");
+        }
+        let sort_length = sv.len();
+        let mut c: String = "".to_string();
+        let mut t: String = "".to_string();
+        let mut s: String = "".to_string();
+        let mut l: String ;
+
+        for start in { 0..sort_length } {
+            let sl = &sv[start..start + 1];
+
+            if sl == "," {
+                if &t == "" {
+                    t = String::from(&c);
+                } else if &s == "" {
+                    s = String::from(&c);
+                }
+                c.clear();
+            } else if sl == ";" {
+                l = String::from(&c);
+                c.clear();
+                let start = s.parse::<usize>().unwrap();
+                let length = l.parse::<usize>().unwrap();
+                if &t == "s" {
+                    tup.push(("s", start, start + length));
+                } else if &t == "d" {
+                    tup.push(("d", start, start + length));
+                }
+                t.clear();
+                s.clear();
+                l.clear();
+            } else {
+                c.push_str(sl);
+            }
+        }
+    }
 
     tup
 }
@@ -400,7 +441,9 @@ fn compare_by_predicate(a: &String, b: &String, tup: &Vec<(&str, usize, usize)>)
     let equal = Ordering::Equal;
 
     for var in tup {
-        if var.0 == "s" {
+        if var.0 == "l" {
+            return a.cmp(b);
+        } else if var.0 == "s" {
             compare = compare_string_slice(a, b, var.1, var.2);
 
             if compare != equal
