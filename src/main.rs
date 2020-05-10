@@ -543,12 +543,3 @@ fn root_path() -> String {
 
     String::from(root_str)
 }
-
-fn drop_file(s: &str) {
-    let r = std::fs::remove_file(s);
-
-    match r {
-        Ok(_) => {}
-        Err(_) => {}
-    }
-}
