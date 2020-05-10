@@ -2,6 +2,8 @@
 name = "file-sort"
 version = "0.1.0"
 authors = ["Ed Broome <info@sifichi.com>"]
+description = "Large text file sort"
+keywords = ["sort", "text"]
 edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
