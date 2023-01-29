@@ -179,7 +179,7 @@ fn join_files(source: &str, sort: &Vec<(&str, usize, usize)>) -> String {
     let reader_length = buffers.len();
     let mut found = false;
 
-    for current_position in { 0..reader_length } {
+    for current_position in 0..reader_length {
         let buffer: &mut VecDeque<String>;
 
         match check_collection(&mut buffers, &mut offsets, &mut positions, &mut drained, &files, current_position) {
@@ -295,7 +295,7 @@ fn sorter<'a>(sort_value: &str) -> Vec<(&'a str, usize, usize)> {
         let mut s: String = "".to_string();
         let mut l: String ;
 
-        for start in { 0..sort_length } {
+        for start in 0..sort_length {
             let sl = &sv[start..start + 1];
 
             if sl == "," {
