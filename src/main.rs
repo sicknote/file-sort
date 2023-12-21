@@ -1,14 +1,15 @@
 extern crate clap;
 extern crate stopwatch;
 
-use clap::{App, Arg};
-use std::io::{BufReader, BufRead, Write, BufWriter, SeekFrom, Seek};
+use std::{env, fs};
 use std::cmp::Ordering;
-use std::{fs, env};
+use std::collections::VecDeque;
+use std::fs::File;
+use std::io::{BufRead, BufReader, BufWriter, Seek, SeekFrom, Write};
+
+use clap::{arg, command};
 use stopwatch::Stopwatch;
 use uuid::Uuid;
-use std::fs::File;
-use std::collections::VecDeque;
 
 const READER_BUFFER_SIZE: usize = 5_242_880;
 const WRITER_BUFFER_SIZE: usize = 5_242_880;
@@ -22,25 +23,21 @@ enum CollectionState {
 }
 
 fn main() {
-    let matches = App::new("TACT File splitter")
+    let matches = command!()
+        .name("TACT File splitter")
         .version("1.0")
         .author("edb")
         .about("Sort files by row/block")
-        .arg(Arg::with_name("INPUT")
-            .help("Sets the input file to use")
-            .required(true)
-            .index(1))
-        .arg(Arg::with_name("SORT")
-            .help("Sets the type of sorting applied to the file")
-            .short("s")
-            .long("sort")
-            .takes_value(true)
-            .required(false))
-        .get_matches();
+        .arg(arg!(<INPUT> "Sets the input file to use"))
+        .arg(
+            arg!(-s --sort <SORT>)
+                .help("Sets the type of sorting applied to the file")
+                .required(false)
+        ).get_matches();
 
-    let source_path = matches.value_of("INPUT").unwrap();
+    let source_path = matches.get_one::<String>("INPUT").unwrap();
     let sort_value: &str;
-    let sort_type = matches.value_of("SORT");
+    let sort_type = matches.try_get_one::<String>("SORT").unwrap();
 
     match sort_type {
         None => {
@@ -293,7 +290,7 @@ fn sorter<'a>(sort_value: &str) -> Vec<(&'a str, usize, usize)> {
         let mut c: String = "".to_string();
         let mut t: String = "".to_string();
         let mut s: String = "".to_string();
-        let mut l: String ;
+        let mut l: String;
 
         for start in 0..sort_length {
             let sl = &sv[start..start + 1];
@@ -527,7 +524,7 @@ fn files_in_directory(source_path: &str) -> Vec<String> {
 fn temporary_directory(root: String) -> String {
     let mut directory = root.clone();
     let my_uuid = Uuid::new_v4().as_simple()
-        .to_string();
+                                .to_string();
 
     directory.push('\\');
     directory.push_str(my_uuid.as_str());
