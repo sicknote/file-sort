@@ -526,7 +526,7 @@ fn files_in_directory(source_path: &str) -> Vec<String> {
 
 fn temporary_directory(root: String) -> String {
     let mut directory = root.clone();
-    let my_uuid = Uuid::new_v4().to_simple()
+    let my_uuid = Uuid::new_v4().as_simple()
         .to_string();
 
     directory.push('\\');
