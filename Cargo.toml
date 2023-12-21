@@ -10,6 +10,7 @@ edition = "2018"
 
 [dependencies]
 clap = { version = "4.4.11", features = ["cargo"] }
+rustc-serialize = "0.3.25"
 stopwatch = "0.0.7"
 uuid = { version = "1.6.1", features = ["serde", "v4"] }
 
