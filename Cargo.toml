@@ -9,9 +9,10 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-clap = "2.33.0"
+clap = { version = "4.4.11", features = ["cargo"] }
+rustc-serialize = "0.3.25"
 stopwatch = "0.0.7"
-uuid = { version = "0.8.1", features = ["serde", "v4"] }
+uuid = { version = "1.6.1", features = ["serde", "v4"] }
 
 [profile.release]
 debug = false
